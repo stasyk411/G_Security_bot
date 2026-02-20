@@ -16,8 +16,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Токен бота для ГБР (вставь сюда)
-GBR_BOT_TOKEN = "ЗДЕСЬ_ТОКЕН_ТВОЕГО_GBR_Crew_bot"
+# Токен бота для ГБР
+GBR_BOT_TOKEN = os.getenv('GBR_BOT_TOKEN')
+
+# ID диспетчера (тот же, что в bot.py)
+DISPATCHER_ID = 5986066094
 
 # Путь к базе данных (общая с диспетчерским ботом)
 DB_PATH = 'objects.db'
@@ -57,11 +60,18 @@ def update_crew_status(crew_id, status):
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Приветствие и регистрация ГБР"""
+    """Обработчик команды /start"""
     user_id = update.effective_user.id
-    username = update.effective_user.first_name
     
-    # Проверяем, есть ли уже такой ГБР в базе
+    # 1. Сначала проверяем, не диспетчер ли это
+    if user_id == DISPATCHER_ID:
+        await update.message.reply_text(
+            "❌ Этот бот только для ГБР.\n"
+            "Используйте @GBR_Security_bot для работы диспетчера."
+        )
+        return
+    
+    # 2. Проверяем, есть ли пользователь в таблице ГБР
     crew = get_crew_by_telegram_id(user_id)
     
     if crew:
@@ -72,7 +82,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             reply_markup=main_keyboard
         )
     else:
-        # Если ГБР нет в базе, предлагаем связаться с диспетчером
         await update.message.reply_text(
             "❌ Ты не зарегистрирован в системе как ГБР.\n"
             "Обратись к диспетчеру, чтобы добавить тебя в базу.",
@@ -84,6 +93,13 @@ async def handle_status_change(update: Update, context: ContextTypes.DEFAULT_TYP
     """Обработка нажатий на кнопки"""
     user_id = update.effective_user.id
     text = update.message.text
+    
+    # Диспетчер не должен менять статусы
+    if user_id == DISPATCHER_ID:
+        await update.message.reply_text(
+            "❌ Диспетчер не может менять статусы ГБР."
+        )
+        return
     
     crew = get_crew_by_telegram_id(user_id)
     
@@ -125,17 +141,11 @@ async def handle_status_change(update: Update, context: ContextTypes.DEFAULT_TYP
         )
 
 
-async def send_alert_to_gbr(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Эта функция будет вызываться из бота диспетчера"""
-    # Пока заглушка, потом сделаем отправку
-    pass
-
-
 def main():
     """Запуск бота для ГБР"""
-    if not GBR_BOT_TOKEN or GBR_BOT_TOKEN == "ЗДЕСЬ_ТОКЕН_ТВОЕГО_GBR_Crew_bot":
-        logger.error("❌ Не вставлен токен бота для ГБР!")
-        print("\n⚠️  ВНИМАНИЕ: Вставь токен в переменную GBR_BOT_TOKEN в начале файла!\n")
+    if not GBR_BOT_TOKEN:
+        logger.error("❌ GBR_BOT_TOKEN не найден в переменных окружения!")
+        print("\n⚠️  ВНИМАНИЕ: Добавь GBR_BOT_TOKEN в файл .env\n")
         return
     
     # Создаём приложение

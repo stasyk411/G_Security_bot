@@ -337,6 +337,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             obj_id, name, address, category, notes, lat, lon = obj
             crew_id, crew_name, crew_status, crew_telegram_id = crew_info
             
+            # Проверяем, что у ГБР есть telegram_id
+            if not crew_telegram_id:
+                await query.edit_message_text(
+                    f"❌ У {crew_name} не указан Telegram ID. Сначала ГБР должен нажать /start в своем боте."
+                )
+                return
+            
             # Формируем сообщение для ГБР
             navi_url = f"yandexnavi://build_route_on_map?lat_to={lat}&lon_to={lon}"
             maps_url = f"https://yandex.ru/maps/?rtext=~{lat},{lon}&rtab=auto"
@@ -369,7 +376,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             except Exception as e:
                 logger.error(f"Ошибка отправки ГБР: {e}")
                 await query.edit_message_text(
-                    f"❌ Не удалось отправить вызов. ГБР не зарегистрирован в боте?"
+                    f"❌ Не удалось отправить вызов. Ошибка: {str(e)}"
                 )
 
 

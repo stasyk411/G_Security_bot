@@ -1,0 +1,3 @@
+name: GBR Crew Bot
+type: python
+command: python gbr_bot.py
